@@ -1,4 +1,5 @@
-Convert chord + lyric PDFs into clean, presentation-ready PowerPoint slides.
+# 🎵 Chord Lyrics Slide Converter
+Convert chord + lyric PDFs into clean, presentation-ready slides.
 
 ## 🚀 Features
 - Upload chord chart PDFs
