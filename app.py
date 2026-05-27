@@ -60,7 +60,7 @@ KEY_OPTIONS = [
 
 SECTION_HEADERS = ("INTRO", "VERSE", "CHORUS", "BRIDGE", "TAG", "ENDING",
                    "REFRAIN", "INSTRUMENTAL", "INTERLUDE", "VAMP", "BREAKDOWN",
-                   "TURNAROUND", "PRE-CHORUS", "POST-CHORUS", "OUTRO")
+                   "TURNAROUND", "PRE-CHORUS", "PRECHORUS", "POST-CHORUS", "POSTCHORUS", "OUTRO")
 
 # Accommodate for formats like "Verse 1", "Chorus 2", etc.
 SECTION_REGEX = re.compile(rf"^({'|'.join(SECTION_HEADERS)})(\s*\d+)?$", re.IGNORECASE)
