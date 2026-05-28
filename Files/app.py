@@ -523,6 +523,9 @@ def create_ppt(slides):
 
     return ppt_buffer
 
+def create_txt(text):
+    # Create text file of Edited Text
+    return text.encode("utf-8")
 
 # ----------------------------------------
 # ---------- Back-end Processes ----------
@@ -530,41 +533,11 @@ def create_ppt(slides):
 if "history" not in st.session_state:
     st.session_state.history = []
 
-if "current_text" not in st.session_state:
-    st.session_state.current_text = ""
+if "history_index" not in st.session_state:
+    st.session_state.history_index = -1
 
-if "last_committed_text" not in st.session_state:
-    st.session_state.last_committed_text = ""
-
-if "redo_stack" not in st.session_state:
-    st.session_state.redo_stack = []
-
-# Add keyboard listener for keyboard shortcuts
-st.components.v1.html("""
-<script>
-document.addEventListener('keydown', function(e) {
-    // Undo (Cmd/Ctrl + Z)
-    if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
-        e.preventDefault();
-        const input = window.parent.document.querySelector('input[data-testid="undo-trigger"]');
-        if (input) {
-            input.value = Date.now();
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-    }
-
-    // Redo (Cmd/Ctrl + Shift + Z)
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') {
-        e.preventDefault();
-        const input = window.parent.document.querySelector('input[data-testid="redo-trigger"]');
-        if (input) {
-            input.value = Date.now();
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-    }
-});
-</script>
-""", height=0)
+if "last_edit_time" not in st.session_state:
+    st.session_state.last_edit_time = 0
 
 
 # ----------------------------------------
@@ -589,43 +562,6 @@ Convert chord charts into clean, presentation-ready slides.
 </p>
 """, unsafe_allow_html=True)
 
-
-# Hidden triggers input for keyboard shortcuts
-undo_trigger = st.text_input("undo_trigger", key="undo_trigger", label_visibility="collapsed")
-redo_trigger = st.text_input("redo_trigger", key="redo_trigger", label_visibility="collapsed")
-
-st.markdown("""
-    <style>
-    /* Hide last 2 text inputs (undo + redo) */
-    div[data-testid="stTextInput"]:nth-last-of-type(1),
-    div[data-testid="stTextInput"]:nth-last-of-type(2) {
-        display: none;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-if undo_trigger:
-    if st.session_state.history:
-        # Push current state to redo stack
-        st.session_state.redo_stack.append(st.session_state.current_text)
-
-        # Redo previous
-        previous = st.session_state.history.pop()
-        st.session_state.current_text = previous
-        st.session_state.last_committed_text = previous
-
-
-if redo_trigger:
-    if st.session_state.redo_stack:
-        # Save current state to history (so undo still works)
-        st.session_state.history.append(st.session_state.current_text)
-
-        # Restore redo state
-        next_state = st.session_state.redo_stack.pop()
-        st.session_state.current_text = next_state
-        st.session_state.last_committed_text = next_state
-
-
 # ---------------
 # Step 1: Upload
 # ---------------
@@ -640,6 +576,13 @@ elif pasted_text:
     raw_text = pasted_text
 else:
     raw_text = ""
+
+# Initialize history
+if raw_text and st.session_state.history_index == -1:
+    clean_text = normalize_pdf_text(raw_text)
+    st.session_state.history = [clean_text]
+    st.session_state.history_index = 0
+    st.session_state.edited_text = clean_text
 
 # ---------------------
 # Step 2: Review & Fix
@@ -674,16 +617,26 @@ if raw_text:
     # --- Textboxes section ---
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("Editable Text")
+        # Toolbar
+        toolbar_col1, spacer, toolbar_col2, toolbar_col3 = st.columns([4, 1, 2, 2])
+        with toolbar_col1:
+            with st.expander("❓ How to Edit Text"):
+                st.markdown("• Use || for line breaks")
+                st.markdown("• Use --- for slide breaks")
+                st.markdown("• Press Cmd + Enter to apply")
 
-        # Load Help text box
-        with st.expander("❓ How to Edit Text"):
-            st.markdown("• To insert a line break, type || between the lyrics or chords.")
-            st.markdown("• To insert a slide break, type --- between two sections.")
-            st.markdown("• Press Cmd + Return to apply changes.")  
-            st.markdown( "• To undo a change, use Cmd + Z")
-            st.markdown( "• To redo a change, use Cmd + Shift + Z")
-            st.markdown("• Zoom out if chords and lyrics are misaligned.")       
+        with toolbar_col2:
+            if st.button("↩️ Undo Change", disabled=st.session_state.history_index <= 0):
+                st.session_state.history_index -= 1
+                st.session_state.edited_text = st.session_state.history[st.session_state.history_index]
+                st.rerun()
+        with toolbar_col3:
+            if st.button("↪️ Redo Change", disabled=st.session_state.history_index >= len(st.session_state.history) - 1):
+                st.session_state.history_index += 1
+                st.session_state.edited_text = st.session_state.history[st.session_state.history_index]
+                st.rerun()
+        
+        st.subheader("Editable Text")
         
         # Intialize text box once
         if "edited_text" not in st.session_state:
@@ -695,58 +648,48 @@ if raw_text:
         offset = 26     # to account for the Preview Slides padding  
 
         # Render Edited Text box
-        edited_text = st.text_area(
+        st.text_area(
             "",
-            value=st.session_state.edited_text,
             height=height + offset,
-            key="editor"
+            key="edited_text",
         )
+        edited_text = st.session_state.edited_text
 
-        st.session_state.edited_text = edited_text
+        # Store current text and history for undo/redo
+        current = st.session_state.edited_text
+        history = st.session_state.history
+        index = st.session_state.history_index
 
-        # Capture time to prevent excessive re-renders during typing
-        if "last_edit_time" not in st.session_state:
-            st.session_state.last_edit_time = 0
+        # Initalize first state
+        if index == -1:
+            st.session_state.history = [current]
+            st.session_state.history_index = 0
+        
+        # Save history only when text changes
+        elif current != history[index]:
+            now = time.time()
 
-        st.session_state.last_edit_time = time.time()
+            # debounce (prevents saving every keystroke)
+            if now - st.session_state.last_edit_time > 0.4:
+                # cut off redo history
+                st.session_state.history = history[:index + 1]
+
+                # append new state
+                st.session_state.history.append(current)
+                st.session_state.history_index += 1
+
+                st.session_state.last_edit_time = now
+
 
     # -----------------------
     # Step 3: Preview Slides
     # -----------------------
     with col2:
-        st.subheader("Slide Preview")
         st.subheader("")
+        st.subheader("Slide Preview")
         
-        # Get time since last edit
-        last_edit_time = st.session_state.get("last_edit_time", 0)
-        last_good_text = st.session_state.get("last_good_text", edited_text)
+        text_to_use = st.session_state.edited_text
 
-        if time.time() - last_edit_time > 0.3:
-            # Only commit if text change is meaningful
-            if edited_text != st.session_state.last_committed_text:
-                
-                # Save previous committed version to history
-                if st.session_state.last_committed_text:
-                    st.session_state.history.append(st.session_state.last_committed_text)
-
-                # Limit history size to prevent memory issues
-                max_history = 50
-                if len(st.session_state.history) > max_history:
-                    st.session_state.history.pop(0)
-
-                # Clear redo when new edit happens
-                st.session_state.redo_stack.clear()
-
-                # Update committed state
-                st.session_state.current_text = edited_text
-                st.session_state.last_committed_text = edited_text
-
-            text_to_use = st.session_state.current_text
-
-        else:
-            # While typing, don't commit yet
-            text_to_use = edited_text
-           
         slides = split_slides(text_to_use)
         slides_html= ""
 
@@ -785,18 +728,53 @@ if raw_text:
         # Render Slide Preview
         st.html("<div style='height: 5px;'></div>")
         st.html(f"""<div class="preview-container" style="height:{height}px;">
-       {slides_html}
+        {slides_html}
         </div>"""
         )
 
+    # ----------------
     # Step 4: Export
+    # ----------------
     st.header("Step 3 — Export")
 
-    ppt_file = create_ppt(processed_slides)
+    # File name input
+    file_name_input = st.text_input("Enter File Name", key="file_name_input")
 
-    st.download_button(
-        label="⬇️ Download PPTX",
-        data=ppt_file,
-        file_name="slides.pptx",
-        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-    )
+    # Track confirmed filename
+    if "confirmed_file_name" not in st.session_state:
+        st.session_state.confirmed_file_name = ""
+
+    # Detect Enter (value change triggers rerun)
+    if file_name_input != st.session_state.confirmed_file_name:
+        st.session_state.confirmed_file_name = file_name_input.strip()
+
+    # Add reminder to press Enter if needed
+    if not st.session_state.confirmed_file_name:
+        st.caption("Press Enter to confirm file name")
+    else:
+        st.caption(f"✅ File name confirmed: {st.session_state.confirmed_file_name}")
+    
+    file_name = st.session_state.confirmed_file_name
+    file_name = file_name.replace(".pptx", "").replace(".txt", "")
+
+    ppt_file = create_ppt(processed_slides)
+    if file_name:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.download_button(
+                label="⬇️ Download Slides",
+                data=ppt_file,
+                file_name=f"{file_name}.pptx",
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            )
+
+        with col2:
+            st.download_button(
+                label="⬇️ Download Text File",
+                data=text_to_use.encode("utf-8"),
+                file_name=f"{file_name}.txt",
+                mime="text/plain"
+            )
+        
+    
