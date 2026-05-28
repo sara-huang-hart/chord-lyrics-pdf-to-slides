@@ -16,6 +16,7 @@ from pptx.util import Inches, Pt
 from pptx.enum.text import MSO_AUTO_SIZE, PP_ALIGN
 from pptx.dml.color import RGBColor
 from io import BytesIO
+import zipfile
 import time
 
 # ----------------------------------------
@@ -736,7 +737,7 @@ if raw_text:
     # ----------------
     st.header("Step 3 — Export")
 
-    # File name input
+    # --- File name input
     file_name_input = st.text_input("Enter File Name", key="file_name_input")
 
     # Track confirmed filename
@@ -757,23 +758,40 @@ if raw_text:
     file_name = file_name.replace(".pptx", "").replace(".txt", "")
 
     ppt_file = create_ppt(processed_slides)
+
+     # --- Create zip file for Download All button
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+        zip_file.writestr(f"{file_name}.pptx", ppt_file.getvalue())
+        zip_file.writestr(f"{file_name}.txt", text_to_use.encode("utf-8"))
+    zip_buffer.seek(0)
+
     if file_name:
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
 
         with col1:
             st.download_button(
-                label="⬇️ Download Slides",
+                label="📦 Download All Files",
+                data=zip_buffer,
+                file_name=f"{file_name}.zip",
+                mime="application/zip"
+            )
+
+        with col2:
+            st.download_button(
+                label="🖥 Download Slides",
                 data=ppt_file,
                 file_name=f"{file_name}.pptx",
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
             )
 
-        with col2:
+        with col3:
             st.download_button(
-                label="⬇️ Download Text File",
+                label="🗒 Download Text File",
                 data=text_to_use.encode("utf-8"),
                 file_name=f"{file_name}.txt",
                 mime="text/plain"
             )
+        
         
     
