@@ -614,28 +614,30 @@ if raw_text:
             - NOTES.index(calc_original)
         ) % 12
 
-    # --- Textboxes section ---
-    col1, col2 = st.columns(2)
-    with col1:
-        # Toolbar
-        toolbar_col1, spacer, toolbar_col2, toolbar_col3 = st.columns([4, 1, 2, 2])
+    # --- Toolbar + Textboxes ---
+    col_left, col_right = st.columns([1, 1])
+    with col_left:
+        # --- Toolbar section
+        toolbar_col1, toolbar_col2, toolbar_col3 = st.columns([4, 2, 2])
         with toolbar_col1:
-            with st.expander("❓ How to Edit Text"):
+            with st.popover("❓ Help Menu"):
+                st.markdown("### How to Edit Text")
                 st.markdown("• Use || for line breaks")
                 st.markdown("• Use --- for slide breaks")
                 st.markdown("• Press Cmd + Enter to apply")
 
         with toolbar_col2:
-            if st.button("↩️ Undo Change", disabled=st.session_state.history_index <= 0):
+            if st.button("↩️", help="Undo Change", disabled=st.session_state.history_index <= 0):
                 st.session_state.history_index -= 1
                 st.session_state.edited_text = st.session_state.history[st.session_state.history_index]
                 st.rerun()
         with toolbar_col3:
-            if st.button("↪️ Redo Change", disabled=st.session_state.history_index >= len(st.session_state.history) - 1):
+            if st.button("↪️", help="Redo Change", disabled=st.session_state.history_index >= len(st.session_state.history) - 1):
                 st.session_state.history_index += 1
                 st.session_state.edited_text = st.session_state.history[st.session_state.history_index]
                 st.rerun()
         
+        # --- Editable Text textbox section
         st.subheader("Editable Text")
         
         # Intialize text box once
@@ -680,11 +682,8 @@ if raw_text:
 
                 st.session_state.last_edit_time = now
 
-
-    # -----------------------
-    # Step 3: Preview Slides
-    # -----------------------
-    with col2:
+    # ---Slide Preview section
+    with col_right:
         st.subheader("")
         st.subheader("Slide Preview")
         
@@ -733,7 +732,7 @@ if raw_text:
         )
 
     # ----------------
-    # Step 4: Export
+    # Step 3: Export
     # ----------------
     st.header("Step 3 — Export")
 
