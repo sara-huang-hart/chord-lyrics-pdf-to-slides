@@ -578,27 +578,44 @@ Convert chord charts into clean, presentation-ready slides.
 st.header("Step 1 — Upload")
 raw_text = ""
 
-# Option 1: Upload file
-uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
-if uploaded_file:
-    raw_text = extract_text_from_pdf(uploaded_file)
-    source_id = uploaded_file.name + str(uploaded_file.size)
-    load_new_text(normalize_pdf_text(raw_text), source_id)
+# Create toggle
+input_mode = st.radio("Choose Input Method", ["Upload PDF", "Paste Text"], horizontal=True)
 
-# Option 2: Paste text
-with st.form("paste_form"):
-    pasted_text = st.text_area("Or paste text")
-    
-    # Button (required when using st.form)
-    submitted = st.form_submit_button()         
-    st.markdown("""<style> div[data-testid="stFormSubmitButton"] {display: none;}
-        </style>""", unsafe_allow_html=True)    # hide button
-    
-    if submitted and pasted_text:
-        # Use hash for stronger detection (when user uploads file with same name)
-        paste_id = hashlib.md5(pasted_text.encode()).hexdigest()
-        raw_text = pasted_text
-        load_new_text(normalize_pdf_text(pasted_text), paste_id)    
+# Reset text and history when switching input modes
+if "last_mode" not in st.session_state:
+    st.session_state.last_mode = input_mode
+
+if st.session_state.last_mode != input_mode:
+    st.session_state.last_mode = input_mode
+    st.session_state.edited_text = ""
+    st.session_state.history = []
+    st.session_state.history_index = -1
+    st.session_state.last_source_id = None
+    st.session_state.last_mode = input_mode
+
+if input_mode == "Upload PDF":
+    # Option 1: Upload file
+    uploaded_file = st.file_uploader("Upload PDF Here", type=["pdf"])
+    if uploaded_file:
+        raw_text = extract_text_from_pdf(uploaded_file)
+        source_id = uploaded_file.name + str(uploaded_file.size)
+        load_new_text(normalize_pdf_text(raw_text), source_id)
+
+elif input_mode == "Paste Text":
+    # Option 2: Paste text
+    with st.form("paste_form"):
+        pasted_text = st.text_area("Paste Text Here")
+        
+        # Button (required when using st.form)
+        submitted = st.form_submit_button()         
+        st.markdown("""<style> div[data-testid="stFormSubmitButton"] {display: none;}
+            </style>""", unsafe_allow_html=True)    # hide button
+        
+        if submitted and pasted_text:
+            # Use hash for stronger detection (when user uploads file with same name)
+            paste_id = hashlib.md5(pasted_text.encode()).hexdigest()
+            raw_text = pasted_text
+            load_new_text(normalize_pdf_text(pasted_text), paste_id)    
 
 # ---------------------
 # Step 2: Review & Fix
