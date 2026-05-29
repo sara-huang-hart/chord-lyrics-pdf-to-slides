@@ -18,6 +18,7 @@ from pptx.dml.color import RGBColor
 from io import BytesIO
 import zipfile
 import time
+import hashlib
 
 # ----------------------------------------
 # --------------- Utilities --------------
@@ -81,6 +82,14 @@ def extract_text_from_pdf(file):
             if t:
                 text += t + "\n"
     return text
+
+def load_new_text(new_text, source_id):
+    # Use case: Refresh textboxes when new upload or new pasted text
+    if source_id != st.session_state.get("last_source_id"):
+        st.session_state.edited_text = new_text
+        st.session_state.history = [new_text]
+        st.session_state.history_index = 0
+        st.session_state.last_source_id = source_id
 
 def normalize_pdf_text(text):
     # Normalize line endings
@@ -567,23 +576,29 @@ Convert chord charts into clean, presentation-ready slides.
 # Step 1: Upload
 # ---------------
 st.header("Step 1 — Upload")
+raw_text = ""
 
+# Option 1: Upload file
 uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
-pasted_text = st.text_area("Or paste text")
-
 if uploaded_file:
     raw_text = extract_text_from_pdf(uploaded_file)
-elif pasted_text:
-    raw_text = pasted_text
-else:
-    raw_text = ""
+    source_id = uploaded_file.name + str(uploaded_file.size)
+    load_new_text(normalize_pdf_text(raw_text), source_id)
 
-# Initialize history
-if raw_text and st.session_state.history_index == -1:
-    clean_text = normalize_pdf_text(raw_text)
-    st.session_state.history = [clean_text]
-    st.session_state.history_index = 0
-    st.session_state.edited_text = clean_text
+# Option 2: Paste text
+with st.form("paste_form"):
+    pasted_text = st.text_area("Or paste text")
+    
+    # Button (required when using st.form)
+    submitted = st.form_submit_button()         
+    st.markdown("""<style> div[data-testid="stFormSubmitButton"] {display: none;}
+        </style>""", unsafe_allow_html=True)    # hide button
+    
+    if submitted and pasted_text:
+        # Use hash for stronger detection (when user uploads file with same name)
+        paste_id = hashlib.md5(pasted_text.encode()).hexdigest()
+        raw_text = pasted_text
+        load_new_text(normalize_pdf_text(pasted_text), paste_id)    
 
 # ---------------------
 # Step 2: Review & Fix
@@ -640,10 +655,6 @@ if raw_text:
         
         # --- Editable Text textbox section
         st.subheader("Editable Text")
-        
-        # Intialize text box once
-        if "edited_text" not in st.session_state:
-            st.session_state.edited_text = normalize_pdf_text(raw_text)
         
         # Dynamically adjust box height based on content
         lines = st.session_state.edited_text.count("\n") + 1
