@@ -588,6 +588,7 @@ if "last_mode" not in st.session_state:
 if st.session_state.last_mode != input_mode:
     st.session_state.last_mode = input_mode
     st.session_state.edited_text = ""
+    st.session_state.pop("uploaded_file", None)
     st.session_state.history = []
     st.session_state.history_index = -1
     st.session_state.last_source_id = None
@@ -595,7 +596,7 @@ if st.session_state.last_mode != input_mode:
 
 if input_mode == "Upload PDF":
     # Option 1: Upload file
-    uploaded_file = st.file_uploader("Upload PDF Here", type=["pdf"])
+    uploaded_file = st.file_uploader("Upload PDF Here", type=["pdf"], key="uploaded_file")
     if uploaded_file:
         raw_text = extract_text_from_pdf(uploaded_file)
         source_id = uploaded_file.name + str(uploaded_file.size)
@@ -681,7 +682,7 @@ if raw_text:
         # Render Edited Text box
         st.text_area(
             "",
-            height=height + offset,
+            height=1000,
             key="edited_text",
         )
         edited_text = st.session_state.edited_text
