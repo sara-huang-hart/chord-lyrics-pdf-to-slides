@@ -561,6 +561,49 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Enforce dark mode with custom CSS
+st.markdown("""
+<style>
+
+/* Force dark mode at browser level */
+:root {
+    color-scheme: dark;
+}
+
+/* Override system light mode */
+@media (prefers-color-scheme: light) {
+    html, body, [data-testid="stAppViewContainer"] {
+        background-color: #0e1117 !important;
+        color: #ffffff !important;
+    }
+}
+
+/* Base styling */
+html, body, [data-testid="stAppViewContainer"] {
+    background-color: #0e1117;
+    color: #ffffff;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: #161b22;
+}
+
+/* Inputs */
+textarea, input {
+    background-color: #262730 !important;
+    color: #ffffff !important;
+}
+
+/* Buttons */
+button {
+    background-color: #262730 !important;
+    color: #ffffff !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
 # Load CSS
 load_css()
     
@@ -578,16 +621,6 @@ st.markdown("""
 /* Hide top-right menu (contains theme toggle) */
 #MainMenu {visibility: hidden;}
 header {visibility: hidden;}
-</style>
-""", unsafe_allow_html=True)
-
-# Override light mode (use case: user somehow switches to light mode)
-st.markdown("""
-<style>
-html, body, [data-testid="stAppViewContainer"] {
-    background-color: #0e1117;
-    color: white;
-}
 </style>
 """, unsafe_allow_html=True)
 
