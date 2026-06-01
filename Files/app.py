@@ -572,6 +572,25 @@ Convert chord charts into clean, presentation-ready slides.
 </p>
 """, unsafe_allow_html=True)
 
+# Hide theme toggle
+st.markdown("""
+<style>
+/* Hide top-right menu (contains theme toggle) */
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
+
+# Override light mode (use case: user somehow switches to light mode)
+st.markdown("""
+<style>
+html, body, [data-testid="stAppViewContainer"] {
+    background-color: #0e1117;
+    color: white;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------
 # Step 1: Upload
 # ---------------
