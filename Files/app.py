@@ -575,29 +575,35 @@ html, body, [data-testid="stAppViewContainer"] {
     background-color: #0e1117;
     color: #ffffff;
 }
-
-/* Sidebar */
-[data-testid="stSidebar"] {
-    background-color: #161b22;
-}
             
-/* Labels */
-label {
+/* Labels + radio buttons */
+label, div[role="radiogroup"] * {
     color: #ffffff !important;
 }
             
-/* Inputs + selectboxes */
-input, textarea, div[data-baseweb="select"] {
+/* Inputs + buttons + dropdown+ selectboxes */
+input, textarea, button, div[data-baseweb="popover"] , ul[role="listbox"],  li[role="option"], div[data-baseweb="select"] > div{
     background-color: #262730 !important;
     color: #ffffff !important;
 }
 
-/* Dropdown menu */
-div[role="listbox"] {
+/* Dropdown background */
+div[data-baseweb="popover"] {
     background-color: #262730 !important;
-    color: #ffffff !important;
+}
+            
+/* Dropdown hover state */
+li[role="option"]:hover {
+    background-color: #3a3b44 !important;
 }
 
+/* Selectbox text + arrow */
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] svg {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+}
+                        
 /* Placeholder text */
 ::placeholder {
     color: #aaaaaa !important;
@@ -736,7 +742,7 @@ if raw_text:
         # Render Edited Text box
         st.text_area(
             "",
-            height=1000,
+            height=height + offset,
             key="edited_text",
         )
         edited_text = st.session_state.edited_text
