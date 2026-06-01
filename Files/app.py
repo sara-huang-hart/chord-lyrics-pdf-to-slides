@@ -664,15 +664,13 @@ if input_mode == "Upload PDF":
 
 elif input_mode == "Paste Text":
     # Option 2: Paste text
-    with st.form("paste_form"):
-        pasted_text = st.text_area("Paste Text Here")
-        
-        # Button (required when using st.form)
-        submitted = st.form_submit_button()         
-        st.markdown("""<style> div[data-testid="stFormSubmitButton"] {display: none;}
-            </style>""", unsafe_allow_html=True)    # hide button
-        
-        if submitted and pasted_text and pasted_text.strip():
+    pasted_text = st.text_area("Paste Text Here")
+
+    if pasted_text and pasted_text.strip():
+       # Avoid reprocessing on every keystroke
+       if st.session_state.get("last_text") != pasted_text:
+            st.session_state["last_text"] = pasted_text
+
             # Use hash for stronger detection (when user uploads file with same name)
             paste_id = hashlib.md5(pasted_text.encode()).hexdigest()
             raw_text = pasted_text
