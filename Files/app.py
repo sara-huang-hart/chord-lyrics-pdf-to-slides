@@ -570,14 +570,6 @@ st.markdown("""
     color-scheme: dark;
 }
 
-/* Override system light mode */
-@media (prefers-color-scheme: light) {
-    html, body, [data-testid="stAppViewContainer"] {
-        background-color: #0e1117 !important;
-        color: #ffffff !important;
-    }
-}
-
 /* Base styling */
 html, body, [data-testid="stAppViewContainer"] {
     background-color: #0e1117;
@@ -588,17 +580,27 @@ html, body, [data-testid="stAppViewContainer"] {
 [data-testid="stSidebar"] {
     background-color: #161b22;
 }
-
-/* Inputs */
-textarea, input {
+            
+/* Labels */
+label {
+    color: #ffffff !important;
+}
+            
+/* Inputs + selectboxes */
+input, textarea, div[data-baseweb="select"] {
     background-color: #262730 !important;
     color: #ffffff !important;
 }
 
-/* Buttons */
-button {
+/* Dropdown menu */
+div[role="listbox"] {
     background-color: #262730 !important;
     color: #ffffff !important;
+}
+
+/* Placeholder text */
+::placeholder {
+    color: #aaaaaa !important;
 }
 
 </style>
