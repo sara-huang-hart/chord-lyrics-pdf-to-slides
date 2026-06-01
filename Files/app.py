@@ -672,11 +672,12 @@ elif input_mode == "Paste Text":
         st.markdown("""<style> div[data-testid="stFormSubmitButton"] {display: none;}
             </style>""", unsafe_allow_html=True)    # hide button
         
-        if submitted and pasted_text:
+        if submitted and pasted_text and pasted_text.strip():
             # Use hash for stronger detection (when user uploads file with same name)
             paste_id = hashlib.md5(pasted_text.encode()).hexdigest()
             raw_text = pasted_text
             load_new_text(normalize_pdf_text(pasted_text), paste_id)    
+
 
 # ---------------------
 # Step 2: Review & Fix
