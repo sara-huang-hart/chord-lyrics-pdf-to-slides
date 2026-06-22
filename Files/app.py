@@ -843,7 +843,7 @@ if st.session_state.text_to_use:
     # Step 3: Export
     # ----------------
     st.header("Step 3 — Export")
-
+    
     # --- File name input
     file_name_input = st.text_input("Enter File Name", key="file_name_input")
 
@@ -895,7 +895,7 @@ if st.session_state.text_to_use:
         with col3:
             st.download_button(
                 label="🗒 Download Text File",
-                data=text_to_use.encode("utf-8"),
+                data=st.session_state.get("processed_text") or st.session_state.get("text_to_use", ""),
                 file_name=f"{file_name}.txt",
                 mime="text/plain"
             )
