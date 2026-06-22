@@ -55,10 +55,8 @@ DISPLAY_FLATS = {'C#': 'Db',
                  'A#': 'Bb'}
 
 # Available key options for dropdown menu
-KEY_OPTIONS = [
-    "Select key...",
-    "C", "C#", "Db", "D", "D#", "Eb", "E", "F",
-    "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B"]
+KEY_OPTIONS = ["C", "C#", "Db", "D", "D#", "Eb", "E", "F",
+               "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B"]
 
 SECTION_HEADERS = ("INTRO", "VERSE", "CHORUS", "BRIDGE", "TAG", "ENDING",
                    "REFRAIN", "INSTRUMENTAL", "INTERLUDE", "VAMP", "BREAKDOWN",
@@ -86,7 +84,7 @@ def extract_text_from_pdf(file):
 def load_new_text(new_text, source_id):
     # Use case: Refresh textboxes when new upload or new pasted text
     if source_id != st.session_state.get("last_source_id"):
-        st.session_state.edited_text = new_text
+        st.session_state.text_to_use = new_text
         st.session_state.history = [new_text]
         st.session_state.history_index = 0
         st.session_state.last_source_id = source_id
@@ -136,7 +134,6 @@ def transpose_text(text, steps, use_flats=False):
             def transpose_match(match):
                 # Original chord text
                 chord = match.group()
-
 
                 # Split slash chords
                 if "/" in chord:
@@ -549,6 +546,21 @@ if "history_index" not in st.session_state:
 if "last_edit_time" not in st.session_state:
     st.session_state.last_edit_time = 0
 
+if "raw_text" not in st.session_state:
+    st.session_state.raw_text = ""
+
+if "text_to_use" not in st.session_state:
+    st.session_state.text_to_use = ""
+
+if "processed_text" not in st.session_state:
+    st.session_state.processed_text = ""
+
+if "target_key" not in st.session_state:
+    st.session_state.target_key = NOTES[0]  # safe default
+
+if "prev_original_key" not in st.session_state:
+    st.session_state.prev_original_key = None
+
 
 # ----------------------------------------
 # --------------- UI / App ---------------
@@ -647,7 +659,7 @@ if "last_mode" not in st.session_state:
 
 if st.session_state.last_mode != input_mode:
     st.session_state.last_mode = input_mode
-    st.session_state.edited_text = ""
+    st.session_state.text_to_use = ""
     st.session_state.pop("uploaded_file", None)
     st.session_state.history = []
     st.session_state.history_index = -1
@@ -680,32 +692,36 @@ elif input_mode == "Paste Text":
 # ---------------------
 # Step 2: Review & Fix
 # ---------------------
-if raw_text:
+if st.session_state.text_to_use:
     st.header("Step 2 — Review & Fix")
 
     # --- Key transpose section ---
     col1, col2, col3 = st.columns([1, 0.3, 1])
 
     with col1:
-        original_key = st.selectbox("Original Key", KEY_OPTIONS, index=0)
+        original_key = st.selectbox("Original Key", ["Select key..."] + KEY_OPTIONS, key="original_key")
+
+        # Auto-sync target_key if transpose key not selected
+        if original_key != "Select key...":
+            if (
+                st.session_state.target_key == st.session_state.prev_original_key
+                or st.session_state.prev_original_key is None
+            ):
+                st.session_state.target_key = original_key
+        st.session_state.prev_original_key = original_key
 
     with col2:
         st.html("<div style='text-align:center;padding-top:30px;'>→</div>")
 
     with col3:
-        target_key = st.selectbox("Transpose To", KEY_OPTIONS[1:], disabled=(original_key == "Select key..."))
-    
-    # Normalize keys for calculation
-    if original_key == "Select key...":
-        steps = 0
-    else:
-        calc_original = FLAT_MAP.get(original_key, original_key)
-        calc_target = FLAT_MAP.get(target_key, target_key)
+        target_key = st.selectbox("Transpose To", ["Select key..."] + KEY_OPTIONS, key="target_key", disabled=(original_key == "Select key..."))
 
-        steps = (
-            NOTES.index(calc_target)
-            - NOTES.index(calc_original)
-        ) % 12
+    # Normalize keys to sharps for calculating steps
+    orig = FLAT_MAP.get(original_key, original_key)
+    targ = FLAT_MAP.get(target_key, target_key)
+    steps = 0
+    if orig in NOTES and targ in NOTES:
+        steps = (NOTES.index(targ) - NOTES.index(orig)) % 12
 
     # --- Toolbar + Textboxes ---
     col_left, col_right = st.columns([1, 1])
@@ -722,19 +738,19 @@ if raw_text:
         with toolbar_col2:
             if st.button("↩️", help="Undo Change", disabled=st.session_state.history_index <= 0):
                 st.session_state.history_index -= 1
-                st.session_state.edited_text = st.session_state.history[st.session_state.history_index]
+                st.session_state.text_to_use = st.session_state.history[st.session_state.history_index]
                 st.rerun()
         with toolbar_col3:
             if st.button("↪️", help="Redo Change", disabled=st.session_state.history_index >= len(st.session_state.history) - 1):
                 st.session_state.history_index += 1
-                st.session_state.edited_text = st.session_state.history[st.session_state.history_index]
+                st.session_state.text_to_use = st.session_state.history[st.session_state.history_index]
                 st.rerun()
         
         # --- Editable Text textbox section
         st.subheader("Editable Text")
         
         # Dynamically adjust box height based on content
-        lines = st.session_state.edited_text.count("\n") + 1
+        lines = st.session_state.text_to_use.count("\n") + 1
         height = min(1000, max(400, lines * 24))
         offset = 26     # to account for the Preview Slides padding  
 
@@ -742,12 +758,12 @@ if raw_text:
         st.text_area(
             "",
             height=height + offset,
-            key="edited_text",
+            key="text_to_use",
         )
-        edited_text = st.session_state.edited_text
+        text_to_use = st.session_state.text_to_use
 
         # Store current text and history for undo/redo
-        current = st.session_state.edited_text
+        current = st.session_state.text_to_use
         history = st.session_state.history
         index = st.session_state.history_index
 
@@ -771,17 +787,16 @@ if raw_text:
 
                 st.session_state.last_edit_time = now
 
-    # ---Slide Preview section
+    # --- Slide Preview section
     with col_right:
         st.subheader("")
         st.subheader("Slide Preview")
         
-        text_to_use = st.session_state.edited_text
+        text_to_use = st.session_state.text_to_use
+        processed_text = text_to_use
 
         slides = split_slides(text_to_use)
         slides_html= ""
-
-        use_flats = "b" in target_key
 
         processed_slides = []
 
@@ -796,7 +811,9 @@ if raw_text:
             processed_slide = "\n".join(lines)
 
             # Apply transpose
-            processed_slide = transpose_text(processed_slide, steps, use_flats=use_flats)
+            use_flats = isinstance(target_key, str) and "b" in target_key
+            if original_key != "Select key..." and target_key != "Select key...":
+                processed_slide = transpose_text(processed_slide, steps, use_flats=use_flats)
 
             # Store processed slide for export
             processed_slides.append(processed_slide)
@@ -812,6 +829,8 @@ if raw_text:
             <div class="slide-box">
             {formatted_slide}
             </div>"""
+        
+        st.session_state.processed_text = "\n---\n".join(processed_slides)
 
         # Render Slide Preview
         st.html("<div style='height: 5px;'></div>")
